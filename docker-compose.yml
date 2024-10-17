@@ -1,0 +1,49 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./:/shared
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    networks:
+      - regcheq
+    container_name: postgres_db-inventory
+
+  inventory_service:
+    image: inventory-service
+    build:
+      context: ./app_service
+      dockerfile: Dockerfile
+    command: sh -c "uvicorn app_service.app.main:app --reload --port=8000 --host=0.0.0.0"
+    container_name: app_inventory_service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./:/app
+    stdin_open: true
+    tty: true
+    networks:
+      - regcheq
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - CSRF_FRONT=${CSRF_FRONT}
+      - ENV=${ENVIRONMENT}
+    depends_on:
+      - db
+
+networks:
+  regcheq:
+    name: regcheq
+
+volumes:
+  pg_data:
